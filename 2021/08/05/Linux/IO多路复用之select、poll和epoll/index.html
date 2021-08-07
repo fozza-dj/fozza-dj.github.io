@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.3/css/all.min.css" integrity="sha256-2H3fkXt6FEmrReK448mDVGKb3WW2ZZw35gI7vqHOE4Y=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","version":"8.7.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+<meta name="description" content="IO指的是网络IO，在Linux中一切皆文件，因此网络IO也经常用fd(file description)表示。IO复用指的是网络IO在读写的过程中，必然存在等待，IO复用技术就是协调多个可释放资源的FD，交替处理多个fd。常见的Linux IO复用模型包括select、poll和epoll等。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="IO多路复用之select、poll和epoll">
+<meta property="og:url" content="http://example.com/2021/08/05/Linux/IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E4%B9%8Bselect%E3%80%81poll%E5%92%8Cepoll/index.html">
+<meta property="og:site_name" content="FOZZA BLOG">
+<meta property="og:description" content="IO指的是网络IO，在Linux中一切皆文件，因此网络IO也经常用fd(file description)表示。IO复用指的是网络IO在读写的过程中，必然存在等待，IO复用技术就是协调多个可释放资源的FD，交替处理多个fd。常见的Linux IO复用模型包括select、poll和epoll等。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-05T08:55:49.000Z">
+<meta property="article:modified_time" content="2021-08-06T15:51:06.332Z">
+<meta property="article:author" content="fozza">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2021/08/05/Linux/IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E4%B9%8Bselect%E3%80%81poll%E5%92%8Cepoll/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2021/08/05/Linux/IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E4%B9%8Bselect%E3%80%81poll%E5%92%8Cepoll/","path":"2021/08/05/Linux/IO多路复用之select、poll和epoll/","title":"IO多路复用之select、poll和epoll"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>IO多路复用之select、poll和epoll | FOZZA BLOG</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">FOZZA BLOG</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#SELECT%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">SELECT模型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%98%E5%9C%A8%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.1.</span> <span class="nav-text">存在的问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#EPOLL%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">EPOLL模型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-epoll%E4%BC%98%E5%8A%BF"><span class="nav-number">2.1.</span> <span class="nav-text">1. epoll优势</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-epoll%E7%9A%84api%E5%AE%9A%E4%B9%89"><span class="nav-number">2.2.</span> <span class="nav-text">2. epoll的api定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-epoll%E7%9A%84%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.3.</span> <span class="nav-text">3. epoll的底层实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E5%BA%95%E5%B1%82%E8%B0%83%E7%94%A8%E8%BF%87%E7%A8%8B"><span class="nav-number">2.4.</span> <span class="nav-text">4. 底层调用过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-LT%E5%92%8CET%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">2.5.</span> <span class="nav-text">5. LT和ET模式的区别</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-overview">
+            <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">fozza</p>
+  <div class="site-description" itemprop="description">我有所念人 隔在远远乡</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/05/Linux/IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E4%B9%8Bselect%E3%80%81poll%E5%92%8Cepoll/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="fozza">
+      <meta itemprop="description" content="我有所念人 隔在远远乡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="FOZZA BLOG">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          IO多路复用之select、poll和epoll
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-08-05 16:55:49" itemprop="dateCreated datePublished" datetime="2021-08-05T16:55:49+08:00">2021-08-05</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-08-06 23:51:06" itemprop="dateModified" datetime="2021-08-06T23:51:06+08:00">2021-08-06</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>IO指的是网络IO，在Linux中一切皆文件，因此网络IO也经常用fd(file description)表示。<br>IO复用指的是网络IO在读写的过程中，必然存在等待，IO复用技术就是协调多个可释放资源的FD，交替处理多个fd。<br>常见的Linux IO复用模型包括select、poll和epoll等。</p>
+<span id="more"></span>
+<p>高效的IO复用机制:</p>
+<ul>
+<li>协调者消耗最少的系统资源</li>
+<li>最小化FD的等待时间</li>
+<li>最大化FD的数量</li>
+<li>任务处理线程最少的空闲</li>
+</ul>
+<h2 id="SELECT模型"><a href="#SELECT模型" class="headerlink" title="SELECT模型"></a>SELECT模型</h2><p>select基本接口定义：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* According to POSIX.1-2001 */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* According to earlier standards */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/time.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">select</span><span class="params">(<span class="keyword">int</span> nfds, fd_set *readfds, fd_set *writefds,</span></span></span><br><span class="line"><span class="params"><span class="function">           fd_set *exceptfds, struct timeval *timeout)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FD_CLR</span><span class="params">(<span class="keyword">int</span> fd, fd_set *set)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span>  <span class="title">FD_ISSET</span><span class="params">(<span class="keyword">int</span> fd, fd_set *set)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FD_SET</span><span class="params">(<span class="keyword">int</span> fd, fd_set *set)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">FD_ZERO</span><span class="params">(fd_set *set)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p><code>int nfds</code>:监控的最大fd数量，在windows下参数无意义。<br><code>readfds, writefds, exceptfds</code>:分别对应于需要检测的可读文件描述符的集合，可写文件描述符的集 合及异常文件描述符的集合。<br><code>FD_CLR()</code>:删除目标fd。<br><code>FD_ISSET()</code>:检测目标fd是否存在于集合中。<br><code>FD_SET()</code>:用于在fd集合中添加一个文件描述符。<br><code>FD_ZERO()</code>:将指定的文件描述符集清空，在对文件描述符集合进行设置前，必须对其进行初始化，如果不清空，由于在系统分配内存空间后，通常并不作清空处理，所以结果是不可知的。</p>
+<p>使用demo（自用并发模型）：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">fd_set fdRead;</span><br><span class="line">fd_set fdWrite;</span><br><span class="line">fd_set fdExp;</span><br><span class="line"></span><br><span class="line"><span class="built_in">FD_ZERO</span>(&amp;fdRead);</span><br><span class="line"><span class="built_in">FD_ZERO</span>(&amp;fdWrite);</span><br><span class="line"><span class="built_in">FD_ZERO</span>(&amp;fdExp);</span><br><span class="line"></span><br><span class="line"><span class="built_in">FD_SET</span>(_sock, &amp;fdRead);</span><br><span class="line"><span class="built_in">FD_SET</span>(_sock, &amp;fdWrite);</span><br><span class="line"><span class="built_in">FD_SET</span>(_sock, &amp;fdExp);</span><br><span class="line"></span><br><span class="line">SOCKET maxSock = _sock;</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> n = (<span class="keyword">int</span>)_clients.<span class="built_in">size</span>() - <span class="number">1</span>; n &gt;= <span class="number">0</span>; n--) &#123;</span><br><span class="line">    <span class="built_in">FD_SET</span>(_clients[n]-&gt;<span class="built_in">getSockfd</span>(), &amp;fdRead);</span><br><span class="line">    <span class="keyword">if</span> (maxSock &lt; _clients[n]-&gt;<span class="built_in">getSockfd</span>()) &#123;</span><br><span class="line">        maxSock = _clients[n]-&gt;<span class="built_in">getSockfd</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// nfds 是一个整数，是指fd</span></span><br><span class="line">timeval t = &#123; <span class="number">2</span>, <span class="number">0</span> &#125;;</span><br><span class="line"><span class="keyword">int</span> ret = <span class="built_in">select</span>(maxSock + <span class="number">1</span>, &amp;fdRead, &amp;fdWrite, &amp;fdExp, &amp;t);</span><br><span class="line"><span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;select任务结束。\n&quot;</span>);</span><br><span class="line">    <span class="built_in">closeScoket</span>();</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (<span class="built_in">FD_ISSET</span>(_sock, &amp;fdRead)) &#123;</span><br><span class="line">    <span class="built_in">FD_CLR</span>(_sock, &amp;fdRead);</span><br><span class="line">    <span class="built_in">acceptClient</span>();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> n = (<span class="keyword">int</span>)_clients.<span class="built_in">size</span>() - <span class="number">1</span>; n &gt;= <span class="number">0</span>; n--) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">FD_ISSET</span>(_clients[n]-&gt;<span class="built_in">getSockfd</span>(), &amp;fdRead)) &#123;</span><br><span class="line">        <span class="keyword">if</span> (STATUS_EXIT == <span class="built_in">recvData</span>(_clients[n])) &#123;</span><br><span class="line">            <span class="comment">// 客户端连接断开，把客户端socket从监控列表里面移除</span></span><br><span class="line">            <span class="keyword">auto</span> iter = _clients.<span class="built_in">begin</span>() + n;</span><br><span class="line">            <span class="keyword">if</span> (iter != _clients.<span class="built_in">end</span>()) &#123;</span><br><span class="line">                _clients.<span class="built_in">erase</span>(iter);</span><br><span class="line">                <span class="built_in">printf</span>(<span class="string">&quot;成功移除fd。\n&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="存在的问题"><a href="#存在的问题" class="headerlink" title="存在的问题"></a>存在的问题</h3><ul>
+<li>最大监控fd数量不超过1024，无法实现高并发（后续的poll模型解决了这一弊端，但整体改动不大）</li>
+<li>使用O(n)复杂度遍历fd数组查看fd的可读写状态，效率低</li>
+<li>涉及大量内核态与用户态拷贝，消耗大</li>
+<li>每次完成监控需要重新传入并且分时间传入，操作冗余</li>
+</ul>
+<h2 id="EPOLL模型"><a href="#EPOLL模型" class="headerlink" title="EPOLL模型"></a>EPOLL模型</h2><h3 id="1-epoll优势"><a href="#1-epoll优势" class="headerlink" title="1. epoll优势"></a>1. epoll优势</h3><ul>
+<li>对fd数量没有限制</li>
+<li>抛弃了bitmap数组，实现了新的数据结构来存储多种事件</li>
+<li>不需要重复拷贝fd，随用随加，随弃随删</li>
+<li>采用事件驱动避免轮询查看可读写事件</li>
+</ul>
+<h3 id="2-epoll的api定义"><a href="#2-epoll的api定义" class="headerlink" title="2. epoll的api定义"></a>2. epoll的api定义</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//用户数据载体</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">union</span> <span class="title">epoll_data</span> &#123;</span></span><br><span class="line">   <span class="keyword">void</span>    *ptr;</span><br><span class="line">   <span class="keyword">int</span>      fd;</span><br><span class="line">   <span class="keyword">uint32_t</span> u32;</span><br><span class="line">   <span class="keyword">uint64_t</span> u64;</span><br><span class="line">&#125; <span class="keyword">epoll_data_t</span>;</span><br><span class="line"><span class="comment">//fd装载入内核的载体</span></span><br><span class="line"> <span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> &#123;</span></span><br><span class="line">     <span class="keyword">uint32_t</span>     events;    <span class="comment">/* Epoll events */</span></span><br><span class="line">     <span class="keyword">epoll_data_t</span> data;      <span class="comment">/* User data variable */</span></span><br><span class="line"> &#125;;</span><br><span class="line"> <span class="comment">//三板斧api</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_create</span><span class="params">(<span class="keyword">int</span> size)</span></span>; </span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_ctl</span><span class="params">(<span class="keyword">int</span> epfd, <span class="keyword">int</span> op, <span class="keyword">int</span> fd, struct epoll_event *event)</span></span>;  </span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_wait</span><span class="params">(<span class="keyword">int</span> epfd, struct epoll_event *events,</span></span></span><br><span class="line"><span class="params"><span class="function">                 <span class="keyword">int</span> maxevents, <span class="keyword">int</span> timeout)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>epoll_event</strong>是受监控fd</li>
+<li><code>epoll_create()</code>是在内核去创建一个epoll相关的一些列结构，并将一个epfd返回给用户态，后续的操作都是基于此fd的</li>
+<li><code>epoll_ctl()</code>是将fd添加/删除于<code>epoll_create()</code>返回的epfd，其中<strong>epoll_event</strong>是用户态和内核态交互的结构，定义了用户态关心的事件类型和触发时数据的载体<strong>epoll_data</strong></li>
+<li><code>epoll_wait()</code>是阻塞等待用户态返回的可读写事件，epfd还是<code>epoll_create()</code>的返回值，<strong>events</strong>是个结构体指针存储<strong>epoll_event</strong></li>
+</ul>
+<p>官方demo：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MAX_EVENTS 10</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> <span class="title">ev</span>, <span class="title">events</span>[<span class="title">MAX_EVENTS</span>];</span></span><br><span class="line"><span class="keyword">int</span> listen_sock, conn_sock, nfds, epollfd;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* Set up listening socket, &#x27;listen_sock&#x27; (socket(),</span></span><br><span class="line"><span class="comment">  bind(), listen()) */</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">// 返回了一个管理事件的epfd</span></span><br><span class="line">epollfd = <span class="built_in">epoll_create</span>(<span class="number">10</span>);</span><br><span class="line"><span class="keyword">if</span> (epollfd == <span class="number">-1</span>) &#123;</span><br><span class="line">	<span class="built_in">perror</span>(<span class="string">&quot;epoll_create&quot;</span>);</span><br><span class="line">	<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">ev.events = EPOLLIN;</span><br><span class="line">ev.data.fd = listen_sock;</span><br><span class="line"><span class="comment">// 将服务器sock绑定到epoll</span></span><br><span class="line"><span class="keyword">if</span> (<span class="built_in">epoll_ctl</span>(epollfd, EPOLL_CTL_ADD, listen_sock, &amp;ev) == <span class="number">-1</span>) &#123;</span><br><span class="line">	<span class="built_in">perror</span>(<span class="string">&quot;epoll_ctl: listen_sock&quot;</span>);</span><br><span class="line">	<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (;;) &#123;</span><br><span class="line">    <span class="comment">// 查看准备好的事件</span></span><br><span class="line">	nfds = <span class="built_in">epoll_wait</span>(epollfd, events, MAX_EVENTS, <span class="number">-1</span>);</span><br><span class="line">	<span class="keyword">if</span> (nfds == <span class="number">-1</span>) &#123;</span><br><span class="line">		<span class="built_in">perror</span>(<span class="string">&quot;epoll_pwait&quot;</span>);</span><br><span class="line">		<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (n = <span class="number">0</span>; n &lt; nfds; ++n) &#123;</span><br><span class="line">		<span class="keyword">if</span> (events[n].data.fd == listen_sock) &#123;</span><br><span class="line">			<span class="comment">//主监听socket有新连接</span></span><br><span class="line">			conn_sock = <span class="built_in">accept</span>(listen_sock,</span><br><span class="line">				(struct sockaddr*)&amp;local, &amp;addrlen);</span><br><span class="line">			<span class="keyword">if</span> (conn_sock == <span class="number">-1</span>) &#123;</span><br><span class="line">				<span class="built_in">perror</span>(<span class="string">&quot;accept&quot;</span>);</span><br><span class="line">				<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="built_in">setnonblocking</span>(conn_sock);</span><br><span class="line">			ev.events = EPOLLIN | EPOLLET;</span><br><span class="line">			ev.data.fd = conn_sock;</span><br><span class="line">			<span class="keyword">if</span> (<span class="built_in">epoll_ctl</span>(epollfd, EPOLL_CTL_ADD, conn_sock,</span><br><span class="line">				&amp;ev) == <span class="number">-1</span>) &#123;</span><br><span class="line">				<span class="built_in">perror</span>(<span class="string">&quot;epoll_ctl: conn_sock&quot;</span>);</span><br><span class="line">				<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">//已建立连接的可读写句柄</span></span><br><span class="line">			<span class="built_in">do_use_fd</span>(events[n].data.fd);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-epoll的底层实现"><a href="#3-epoll的底层实现" class="headerlink" title="3. epoll的底层实现"></a>3. epoll的底层实现</h3><p>epoll底层实现最重要的两个数据结构:epitem和eventpoll。可以简单的认为epitem是和每个用户态监控IO的fd对应的,eventpoll是用户态创建的管理所有被监控fd的结构，详细的定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span>  _LINUX_RBTREE_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span>  _LINUX_RBTREE_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/stddef.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/rcupdate.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> &#123;</span></span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span>  __rb_parent_color;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span>* <span class="title">rb_right</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span>* <span class="title">rb_left</span>;</span></span><br><span class="line">&#125; __attribute__((<span class="built_in">aligned</span>(<span class="built_in"><span class="keyword">sizeof</span></span>(<span class="keyword">long</span>))));</span><br><span class="line"><span class="comment">/* The alignment might seem pointless, but allegedly CRIS needs it */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rb_root</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span>* <span class="title">rb_node</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">epitem</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span>  <span class="title">rbn</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>  <span class="title">rdllink</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">epitem</span>* <span class="title">next</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">epoll_filefd</span>  <span class="title">ffd</span>;</span></span><br><span class="line">	<span class="keyword">int</span>  nwait;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>  <span class="title">pwqlist</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">eventpoll</span>* <span class="title">ep</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>  <span class="title">fllink</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span>  <span class="title">event</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">eventpoll</span> &#123;</span></span><br><span class="line">	<span class="keyword">spin_lock_t</span>       lock;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mutex</span>      <span class="title">mtx</span>;</span></span><br><span class="line">	<span class="keyword">wait_queue_head_t</span>     wq;</span><br><span class="line">	<span class="keyword">wait_queue_head_t</span>   poll_wait;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">rdllist</span>;</span>   <span class="comment">//就绪链表</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_root</span>      <span class="title">rbr</span>;</span>      <span class="comment">//红黑树根节点 </span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">epitem</span>* <span class="title">ovflist</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-底层调用过程"><a href="#4-底层调用过程" class="headerlink" title="4. 底层调用过程"></a>4. 底层调用过程</h3><p><code>epoll_create()</code>会创建一个类型为struct eventpoll的对象，并返回一个对应的fd。</p>
+<p><code>epoll_ctr()</code>底层主要调用epoll_insert实现操作：</p>
+<ul>
+<li>创建一个并初始化一个struct epitem类型的对象，完成该对象和被监控事件以及epoll对象eventpoll的关联;</li>
+<li>将struct epitem类型的对象加入到epoll对象eventpoll的红黑树中管理起来;</li>
+<li>将struct epitem类型的对象加入到被监控事件对应的目标文件的等待列表中，并注册事件就绪时会调用的回调函数，在epoll中该回调函数就是ep_poll_callback();</li>
+<li>ovflist主要是暂态处理，比如调用ep_poll_callback()回调函数的时候发现eventpoll的ovflist成员不等于EP_UNACTIVE_PTR，说明正在扫描rdllist链表，这时将就绪事件对应的epitem加入到ovflist链表暂存起来，等rdllist链表扫描完再将ovflist链表中的元素移动到rdllist链表中；</li>
+</ul>
+<h3 id="5-LT和ET模式的区别"><a href="#5-LT和ET模式的区别" class="headerlink" title="5. LT和ET模式的区别"></a>5. LT和ET模式的区别</h3><p>默认采用LT模式，LT支持阻塞和非阻塞套，ET模式只支持非阻塞套接字，其效率要高于LT模式，并且LT模式更加安全。LT和ET模式下都可以通过epoll_wait方法来获取事件，LT模式下将事件拷贝给用户程序之后，如果没有被处理或者未处理完，那么在下次调用时还会反馈给用户程序，可以认为数据不会丢失会反复提醒；ET模式下如果没有被处理或者未处理完，那么下次将不再通知到用户程序，因此避免了反复被提醒，却加强了对用户程序读写的要求；</p>
+<p><strong>LT的读写操作</strong></p>
+<ul>
+<li>read模式<br>LT的read模式比较简单，有读事件就读。如果没有处理事件或者这次没有读取完，下一次会重复提醒读事件。</li>
+<li>write模式<br>LT的write模式，只要用户的可写缓冲区为可写状态，即空闲时socket的写缓冲区是未满的，这时候会重复提醒写事件。所以没有数据要发送的时候，要把fd的写事件监控从epoll列表中删除，需要的时候再加回去。</li>
+</ul>
+<p><strong>ET的读写操作</strong></p>
+<ul>
+<li><p>read模式<br>fd可读则返回可读事件，若开发者没有把所有数据读取完毕，epoll不会再次通知read事件，也就是说如果没有全部读取所有数据，那么导致epoll不会再通知该socket的read事件。</p>
+</li>
+<li><p>write模式<br>若发送缓冲区未满，epoll通知write事件，直到开发者填满发送缓冲区，epoll才会在下次发送缓冲区由满变成未满时通知write事件。ET模式下只有socket的状态发生变化时才会通知，也就是读取缓冲区由无数据到有数据时通知read事件，发送缓冲区由满变成未满通知write事件。</p>
+</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/08/05/c++/static/" rel="prev" title="static">
+                  <i class="fa fa-chevron-left"></i> static
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/08/07/%E6%95%B0%E6%8D%AE%E5%BA%93/redis%E5%9F%BA%E7%A1%80/" rel="next" title="redis基础">
+                  redis基础 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">fozza</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
