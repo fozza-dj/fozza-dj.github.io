@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.3/css/all.min.css" integrity="sha256-2H3fkXt6FEmrReK448mDVGKb3WW2ZZw35gI7vqHOE4Y=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","version":"8.7.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+<meta name="description" content="第3章 多线程服务器的使用场合与常用编程模型3.2 单线程服务器的常用编程模型 lighttpd，单线程服务器 libevent, libev ACE, Poco C++ libraries Java NIO, 包括Apache Mina和Netty POE Twisted">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux多线程服务端编程读书笔记">
+<meta property="og:url" content="http://example.com/2021/08/08/%E7%BC%96%E7%A8%8B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/Linux%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%BC%96%E7%A8%8B/index.html">
+<meta property="og:site_name" content="FOZZA BLOG">
+<meta property="og:description" content="第3章 多线程服务器的使用场合与常用编程模型3.2 单线程服务器的常用编程模型 lighttpd，单线程服务器 libevent, libev ACE, Poco C++ libraries Java NIO, 包括Apache Mina和Netty POE Twisted">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-08T15:33:36.000Z">
+<meta property="article:modified_time" content="2021-08-08T16:03:12.829Z">
+<meta property="article:author" content="fozza">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2021/08/08/%E7%BC%96%E7%A8%8B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/Linux%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%BC%96%E7%A8%8B/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2021/08/08/%E7%BC%96%E7%A8%8B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/Linux%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%BC%96%E7%A8%8B/","path":"2021/08/08/编程学习笔记/Linux多线程服务端编程/","title":"Linux多线程服务端编程读书笔记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux多线程服务端编程读书笔记 | FOZZA BLOG</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">FOZZA BLOG</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC3%E7%AB%A0-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E4%BD%BF%E7%94%A8%E5%9C%BA%E5%90%88%E4%B8%8E%E5%B8%B8%E7%94%A8%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">第3章 多线程服务器的使用场合与常用编程模型</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-%E5%8D%95%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E5%B8%B8%E7%94%A8%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">3.2 单线程服务器的常用编程模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-5-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E9%80%82%E7%94%A8%E5%9C%BA%E5%90%88"><span class="nav-number">1.2.</span> <span class="nav-text">3.5 多线程服务器的适用场合</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-1-%E5%BF%85%E9%A1%BB%E7%94%A8%E5%8D%95%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9C%BA%E5%90%88"><span class="nav-number">1.2.1.</span> <span class="nav-text">3.5.1 必须用单线程的场合</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-3-%E9%80%82%E7%94%A8%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%A8%8B%E5%BA%8F%E7%9A%84%E5%9C%BA%E6%99%AF"><span class="nav-number">1.2.2.</span> <span class="nav-text">3.5.3 适用多线程程序的场景</span></a></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-overview">
+            <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">fozza</p>
+  <div class="site-description" itemprop="description">我有所念人 隔在远远乡</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/08/%E7%BC%96%E7%A8%8B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/Linux%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%BC%96%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="fozza">
+      <meta itemprop="description" content="我有所念人 隔在远远乡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="FOZZA BLOG">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux多线程服务端编程读书笔记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-08-08 23:33:36" itemprop="dateCreated datePublished" datetime="2021-08-08T23:33:36+08:00">2021-08-08</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-08-09 00:03:12" itemprop="dateModified" datetime="2021-08-09T00:03:12+08:00">2021-08-09</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h1 id="第3章-多线程服务器的使用场合与常用编程模型"><a href="#第3章-多线程服务器的使用场合与常用编程模型" class="headerlink" title="第3章 多线程服务器的使用场合与常用编程模型"></a>第3章 多线程服务器的使用场合与常用编程模型</h1><h2 id="3-2-单线程服务器的常用编程模型"><a href="#3-2-单线程服务器的常用编程模型" class="headerlink" title="3.2 单线程服务器的常用编程模型"></a>3.2 单线程服务器的常用编程模型</h2><ul>
+<li>lighttpd，单线程服务器</li>
+<li>libevent, libev</li>
+<li>ACE, Poco C++ libraries</li>
+<li>Java NIO, 包括Apache Mina和Netty</li>
+<li>POE</li>
+<li>Twisted</li>
+</ul>
+<span id="more"></span>
+<h2 id="3-5-多线程服务器的适用场合"><a href="#3-5-多线程服务器的适用场合" class="headerlink" title="3.5 多线程服务器的适用场合"></a>3.5 多线程服务器的适用场合</h2><ol>
+<li>多线程单进程</li>
+<li>单线程多进程包括以下两种子模式：<br> a简单地把单线程单进程的进程运行多份<br> b主进程+worker进程，如果必须绑定到一个TCP port，比如httpd+fastcgi</li>
+</ol>
+<h3 id="3-5-1-必须用单线程的场合"><a href="#3-5-1-必须用单线程的场合" class="headerlink" title="3.5.1 必须用单线程的场合"></a>3.5.1 必须用单线程的场合</h3><ol>
+<li>程序可能会fork(2);</li>
+<li>限制程序的CPU占用率。</li>
+</ol>
+<p><strong>只有单线程程序能fork(2)</strong>, 一个程序fork(2)之后一般有两种行为：</p>
+<ol>
+<li>立刻执行<code>exec()</code>，变身为另一个程序。例如shell和inetd。</li>
+<li>不调用<code>exec()</code>，继续运行当前程序。要么通过共享的文件描述符与父进程通信，协同完成任务；要么接过父进程传来的文件描述符，独立完成工作。</li>
+</ol>
+<h3 id="3-5-3-适用多线程程序的场景"><a href="#3-5-3-适用多线程程序的场景" class="headerlink" title="3.5.3 适用多线程程序的场景"></a>3.5.3 适用多线程程序的场景</h3><p>适用场景：提高响应速度，让IO和“计算”相互重叠，降低latency。<br>一个程序要做多线程的，大致要满足：</p>
+<ul>
+<li><em>有多个CPU可用。</em>单核机器上多线程没有性能优势。</li>
+<li><em>线程间有共享数据</em>，即内存中的全局状态。</li>
+<li>共享的数据是可以修改的，而不是静态的常量表。</li>
+<li>提供非均质的服务。即，事件的响应有优先级差异，我们可以用专门的线程来处理优先级高的事件，防止优先级反转。</li>
+<li>latency和throughput同样重要，不是逻辑简单的IO bound或CPU bound程序。</li>
+<li><em>利用异步操作。</em>比如logging。无论往磁盘写log file，还是往log server发送消息都不应该阻塞critical path。</li>
+<li>具有可预测的性能。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/08/08/%E7%AE%97%E6%B3%95/%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3/" rel="prev" title="滑动窗口">
+                  <i class="fa fa-chevron-left"></i> 滑动窗口
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/10/05/%E7%AE%97%E6%B3%95/%E6%8E%92%E5%BA%8F%E7%AE%97%E6%B3%95/" rel="next" title="排序算法">
+                  排序算法 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">fozza</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
