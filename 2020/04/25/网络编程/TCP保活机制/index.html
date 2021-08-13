@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.3/css/all.min.css" integrity="sha256-2H3fkXt6FEmrReK448mDVGKb3WW2ZZw35gI7vqHOE4Y=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","version":"8.7.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+<meta name="description" content="定义一个时间段，在这个时间段内，如果没有任何连接相关的活动，TCP保活机制会开始作用，每隔一个时间间隔，发送一个探测报文，如果连接几个探测报文都没有得到响应，则认为当前的TCP连接已经死亡，系统内核将错误信息通知给上层应用程序。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP保活机制">
+<meta property="og:url" content="http://example.com/2020/04/25/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/TCP%E4%BF%9D%E6%B4%BB%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="FOZZA BLOG">
+<meta property="og:description" content="定义一个时间段，在这个时间段内，如果没有任何连接相关的活动，TCP保活机制会开始作用，每隔一个时间间隔，发送一个探测报文，如果连接几个探测报文都没有得到响应，则认为当前的TCP连接已经死亡，系统内核将错误信息通知给上层应用程序。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-25T08:55:49.000Z">
+<meta property="article:modified_time" content="2021-08-10T13:14:40.571Z">
+<meta property="article:author" content="fozza">
+<meta property="article:tag" content="网络编程">
+<meta property="article:tag" content="TCP">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2020/04/25/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/TCP%E4%BF%9D%E6%B4%BB%E6%9C%BA%E5%88%B6/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2020/04/25/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/TCP%E4%BF%9D%E6%B4%BB%E6%9C%BA%E5%88%B6/","path":"2020/04/25/网络编程/TCP保活机制/","title":"TCP保活机制"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>TCP保活机制 | FOZZA BLOG</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">FOZZA BLOG</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-overview-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-overview">
+            <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">fozza</p>
+  <div class="site-description" itemprop="description">我有所念人 隔在远远乡</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">21</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/04/25/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/TCP%E4%BF%9D%E6%B4%BB%E6%9C%BA%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="fozza">
+      <meta itemprop="description" content="我有所念人 隔在远远乡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="FOZZA BLOG">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          TCP保活机制
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-04-25 16:55:49" itemprop="dateCreated datePublished" datetime="2020-04-25T16:55:49+08:00">2020-04-25</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-08-10 21:14:40" itemprop="dateModified" datetime="2021-08-10T21:14:40+08:00">2021-08-10</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/" itemprop="url" rel="index"><span itemprop="name">网络编程</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>定义一个时间段，在这个时间段内，如果没有任何连接相关的活动，TCP保活机制会开始作用，每隔一个时间间隔，发送一个探测报文，如果连接几个探测报文都没有得到响应，则认为当前的TCP连接已经死亡，系统内核将错误信息通知给上层应用程序。</p>
+<span id="more"></span>
+<p>Linux可以设置保活时间、保活探测的时间间隔、保活探测的次数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">net.ipv4.tcp_keepalive_time=7200</span><br><span class="line">net.ipv4.tcp_keepalive_intvl=75</span><br><span class="line">net.ipv4.tcp_keepalive_probes=9</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>net.ipv4.tcp_keepalive_time=7200</code>: 表示保活时间是7200秒（2小时），也就2小时内如果没有任何连接相关的活动，则会启动保活机制；</li>
+<li><code>net.ipv4.tcp_keepalive_intvl=75</code>: 表示每次检测间隔75秒</li>
+<li><code>net.ipv4.tcp_keepalive_probes=9</code>: 表示检测9次无响应，认为对面是不可达的，断开连接</li>
+</ul>
+<p>如果两端TCP连接一直没有数据交互，则至少要 <strong>7200 + (75 * 9) = 7875秒 （2小时11分15秒</strong> 才可以发现一个失效连接。</p>
+<p>应用程序若想使用tcp保活机制需要通过socket接口设置<code>SO_KEEPALIVE</code>选项才能生效。</p>
+<p>Q1: </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">在没有开启TCP keepalive，且双方一直没有数据交互的情况下，如果客户端的主机崩溃了，会发生什么？</span><br></pre></td></tr></table></figure>
+<p>如果主机崩溃，服务端是无法感知的，且由于没有开启keepalive，服务器会一直保持TCP连接知道这个进程重启。</p>
+<p>Q2：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">那题目中进程崩溃的情况呢？</span><br></pre></td></tr></table></figure>
+<p>使用kill -9来模拟进程崩溃的情况，发现在kill掉进程后，服务器会发送FIN报文，与客户端进行四次挥手。</p>
+<p>Q3:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">「有数据传输」的场景下，客户端主机宕机，迅速重启，会发生什么？</span><br></pre></td></tr></table></figure>
+<p>在客户端主机宕机之后，服务端发送报文没有得到响应就会触发超时重传，如果这时候客户端重启完成，这时候客户端内核就会收到重传的报文：</p>
+<ul>
+<li>如果客户端主机上<strong>没有</strong>进程监听该TCP报文的目的端口号，由于找不到目标端口，客户端内核就会<strong>回复RST报文，重置该TCP连接</strong>；</li>
+<li>如果客户端主机上<strong>有</strong>进程监听该TCP报文的目标端口号，由于客户端主机重启后，之前的TCP连接的数据结构已经丢失了，客户端内核里协议栈会出现找不到该TCP连接的socket结构体，于是就会<strong>回复RST报文，重置TCP连接</strong>。</li>
+</ul>
+<p>Q4：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">接Q4，「客户端主机宕机，一直没有重启」</span><br></pre></td></tr></table></figure>
+<p>服务端超时重传达到阈值之后，服务器达到<strong>最大超时重传次数</strong>或者<strong>最大超时重传时间</strong>后，就会停止重传。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/" rel="tag"># 网络编程</a>
+              <a href="/tags/TCP/" rel="tag"># TCP</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/04/05/c++/C++%E5%B7%A6%E5%80%BC&%E5%8F%B3%E5%80%BC/" rel="prev" title="C++ 左值引用 右值引用">
+                  <i class="fa fa-chevron-left"></i> C++ 左值引用 右值引用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/08/05/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A1%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7/" rel="next" title="面向对象三大特性">
+                  面向对象三大特性 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">fozza</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
