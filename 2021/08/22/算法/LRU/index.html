@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.3/css/all.min.css" integrity="sha256-2H3fkXt6FEmrReK448mDVGKb3WW2ZZw35gI7vqHOE4Y=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","version":"8.7.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+<meta name="description" content="1. 定义12345int capacity;int size;unordered_map&lt;int, DoubleList*&gt; um;DoubleList* head;DoubleList* tail;  定义了LRU的容量，一个双链表，一个哈希表，哈希表存储当前key在链表存放的位置。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LRU算法实现">
+<meta property="og:url" content="http://example.com/2021/08/22/%E7%AE%97%E6%B3%95/LRU/index.html">
+<meta property="og:site_name" content="FOZZA BLOG">
+<meta property="og:description" content="1. 定义12345int capacity;int size;unordered_map&lt;int, DoubleList*&gt; um;DoubleList* head;DoubleList* tail;  定义了LRU的容量，一个双链表，一个哈希表，哈希表存储当前key在链表存放的位置。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-22T15:36:49.000Z">
+<meta property="article:modified_time" content="2021-08-22T15:45:48.917Z">
+<meta property="article:author" content="fozza">
+<meta property="article:tag" content="算法">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2021/08/22/%E7%AE%97%E6%B3%95/LRU/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2021/08/22/%E7%AE%97%E6%B3%95/LRU/","path":"2021/08/22/算法/LRU/","title":"LRU算法实现"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>LRU算法实现 | FOZZA BLOG</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">FOZZA BLOG</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%AE%9A%E4%B9%89"><span class="nav-number">1.</span> <span class="nav-text">1. 定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-get"><span class="nav-number">2.</span> <span class="nav-text">2. get()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-put"><span class="nav-number">3.</span> <span class="nav-text">3. put()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E7%BB%93%E6%9E%9C"><span class="nav-number">4.</span> <span class="nav-text">4. 结果</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-overview">
+            <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">fozza</p>
+  <div class="site-description" itemprop="description">我有所念人 隔在远远乡</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/22/%E7%AE%97%E6%B3%95/LRU/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="fozza">
+      <meta itemprop="description" content="我有所念人 隔在远远乡">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="FOZZA BLOG">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LRU算法实现
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2021-08-22 23:36:49 / 修改时间：23:45:48" itemprop="dateCreated datePublished" datetime="2021-08-22T23:36:49+08:00">2021-08-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">算法</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h3 id="1-定义"><a href="#1-定义" class="headerlink" title="1. 定义"></a>1. 定义</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> capacity;</span><br><span class="line"><span class="keyword">int</span> size;</span><br><span class="line">unordered_map&lt;<span class="keyword">int</span>, DoubleList*&gt; um;</span><br><span class="line">DoubleList* head;</span><br><span class="line">DoubleList* tail;</span><br></pre></td></tr></table></figure>
+
+<p>定义了LRU的容量，一个双链表，一个哈希表，哈希表存储当前key在链表存放的位置。</p>
+<span id="more"></span>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 构造函数</span></span><br><span class="line"><span class="built_in">LRUCache</span>(<span class="keyword">int</span> capacity) : <span class="built_in">capacity</span>(capacity), <span class="built_in">size</span>(<span class="number">0</span>), <span class="built_in">um</span>()&#123;</span><br><span class="line">    head = <span class="keyword">new</span> <span class="built_in">DoubleList</span>();</span><br><span class="line">    tail = <span class="keyword">new</span> <span class="built_in">DoubleList</span>();</span><br><span class="line">    head-&gt;next = tail;</span><br><span class="line">    tail-&gt;pre = head;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 双链表定义</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">DoubleList</span>&#123;</span></span><br><span class="line">    <span class="keyword">int</span> key;</span><br><span class="line">    <span class="keyword">int</span> value;</span><br><span class="line">    DoubleList* next;</span><br><span class="line">    DoubleList* pre;</span><br><span class="line">    <span class="built_in">DoubleList</span>():<span class="built_in">next</span>(<span class="literal">nullptr</span>), <span class="built_in">pre</span>(<span class="literal">nullptr</span>)&#123;&#125;</span><br><span class="line">    <span class="built_in">DoubleList</span>(<span class="keyword">int</span> key, <span class="keyword">int</span> val):<span class="built_in">key</span>(key), <span class="built_in">value</span>(val), <span class="built_in">next</span>(<span class="literal">nullptr</span>), <span class="built_in">pre</span>(<span class="literal">nullptr</span>)&#123;&#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-get"><a href="#2-get" class="headerlink" title="2. get()"></a>2. get()</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">get</span><span class="params">(<span class="keyword">int</span> key)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(!um.<span class="built_in">count</span>(key))&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span>&#123;</span><br><span class="line">        DoubleList* tmp = um[key];</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 移除节点</span></span><br><span class="line">        tmp-&gt;pre-&gt;next = tmp-&gt;next;</span><br><span class="line">        tmp-&gt;next-&gt;pre = tmp-&gt;pre;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 移至开头</span></span><br><span class="line">        head-&gt;next-&gt;pre = tmp;</span><br><span class="line">        tmp-&gt;next = head-&gt;next;</span><br><span class="line">        head-&gt;next = tmp;</span><br><span class="line">        tmp-&gt;pre = head;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> tmp-&gt;value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果存储了对应的{key, value}，则从哈希表找到对应的链表节点，将其移动至表头。</p>
+<h3 id="3-put"><a href="#3-put" class="headerlink" title="3. put()"></a>3. put()</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">put</span><span class="params">(<span class="keyword">int</span> key, <span class="keyword">int</span> value)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 存在key，更新其值</span></span><br><span class="line">    <span class="keyword">if</span>(um.<span class="built_in">count</span>(key))&#123;</span><br><span class="line">        DoubleList* tmp = um[key];</span><br><span class="line">        tmp-&gt;value = value;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 移除节点</span></span><br><span class="line">        tmp-&gt;pre-&gt;next = tmp-&gt;next;</span><br><span class="line">        tmp-&gt;next-&gt;pre = tmp-&gt;pre;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 移至开头</span></span><br><span class="line">        head-&gt;next-&gt;pre = tmp;</span><br><span class="line">        tmp-&gt;next = head-&gt;next;</span><br><span class="line">        head-&gt;next = tmp;</span><br><span class="line">        tmp-&gt;pre = head;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(size &lt; capacity)&#123;</span><br><span class="line">            DoubleList* tmp = <span class="keyword">new</span> <span class="built_in">DoubleList</span>(key, value);</span><br><span class="line">            um[key] = tmp;</span><br><span class="line"></span><br><span class="line">            tmp-&gt;next = head-&gt;next;</span><br><span class="line">            head-&gt;next-&gt;pre = tmp;</span><br><span class="line">            tmp-&gt;pre = head;</span><br><span class="line">            head-&gt;next = tmp;</span><br><span class="line"></span><br><span class="line">            size++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span>&#123;</span><br><span class="line">            <span class="comment">// 删除最近最少使用缓存</span></span><br><span class="line">            DoubleList* tmp = tail-&gt;pre;</span><br><span class="line">            um.<span class="built_in">erase</span>(tmp-&gt;key);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 更新节点</span></span><br><span class="line">            tmp-&gt;key = key;</span><br><span class="line">            tmp-&gt;value = value;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 移除最近最少使用节点</span></span><br><span class="line">            tmp-&gt;pre-&gt;next = tail;</span><br><span class="line">            tail-&gt;pre = tmp-&gt;pre;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 移至开头</span></span><br><span class="line">            head-&gt;next-&gt;pre = tmp;</span><br><span class="line">            tmp-&gt;next = head-&gt;next;</span><br><span class="line">            head-&gt;next = tmp;</span><br><span class="line">            tmp-&gt;pre = head;</span><br><span class="line"></span><br><span class="line">            um[key] = tmp;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>三种情况：</p>
+<ol>
+<li>插入的节点key已经在表中存在，直接更新其值，将其节点移动至表头。</li>
+<li>表容量未满的情况下，直接插入节点，将节点插入在表头。</li>
+<li>表容量已满，触发淘汰机制，将最近最少使用的key从表中移除，然后将链表尾部节点更新key、value，移动至表头，省去节点新建和释放操作。</li>
+</ol>
+<h3 id="4-结果"><a href="#4-结果" class="headerlink" title="4. 结果"></a>4. 结果</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="function">LRUCache <span class="title">obj</span><span class="params">(<span class="number">2</span>)</span></span>;</span><br><span class="line">    obj.<span class="built_in">put</span>(<span class="number">1</span>, <span class="number">1</span>);</span><br><span class="line">    obj.<span class="built_in">put</span>(<span class="number">2</span>, <span class="number">2</span>);</span><br><span class="line">    cout &lt;&lt; obj.<span class="built_in">get</span>(<span class="number">1</span>) &lt;&lt; endl;</span><br><span class="line">    obj.<span class="built_in">put</span>(<span class="number">3</span>, <span class="number">3</span>);</span><br><span class="line">    cout &lt;&lt; obj.<span class="built_in">get</span>(<span class="number">2</span>) &lt;&lt; endl;</span><br><span class="line">    obj.<span class="built_in">put</span>(<span class="number">4</span>, <span class="number">4</span>);</span><br><span class="line">    cout &lt;&lt; obj.<span class="built_in">get</span>(<span class="number">1</span>) &lt;&lt; endl;</span><br><span class="line">    cout &lt;&lt; obj.<span class="built_in">get</span>(<span class="number">3</span>) &lt;&lt; endl;</span><br><span class="line">    cout &lt;&lt; obj.<span class="built_in">get</span>(<span class="number">4</span>) &lt;&lt; endl;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">PS H:\program\leetcode&gt; .\lru.exe</span><br><span class="line">1</span><br><span class="line">-1</span><br><span class="line">-1</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E7%AE%97%E6%B3%95/" rel="tag"># 算法</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/08/20/Linux/top%E5%91%BD%E4%BB%A4%E8%AF%A6%E8%A7%A3/" rel="prev" title="top命令详解">
+                  <i class="fa fa-chevron-left"></i> top命令详解
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">fozza</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
